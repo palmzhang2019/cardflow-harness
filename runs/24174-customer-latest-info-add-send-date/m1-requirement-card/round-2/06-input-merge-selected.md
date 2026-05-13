@@ -3,86 +3,470 @@
 - task_id: 24174-customer-latest-info-add-send-date
 - stage: m1-requirement-card
 - round: round-2
-- task: compare-candidates
+- task: merge-selected-requirement-card
 
 ---
 
 ## Instruction
 
-# M1 Requirement Card Candidate Comparator
+# M1 Selected Requirement Card Merger
 
-你现在是 Requirement Card 比较 Agent。
+你现在是 Requirement Card 合并 Agent。
 
 你的任务：
-比较 3 张 Requirement Card Candidate，并生成 07-comparison.md。
+基于 09-decision.md、07-comparison.md、08-score.json 和 3 张 Candidate，生成 10-selected-requirement-card.md。
 
 当前阶段：
-只允许比较 Requirement Card Candidate。
-不要生成新的 Requirement Card。
+只允许生成 Selected Requirement Card。
 不要进入 Engineering Requirement Card。
 不要写代码、SQL、patch、diff、实现方案。
+不要生成 Plan。
 
-比较对象：
-- Candidate A: Codex
-- Candidate B: Claude
-- Candidate C: DeepSeek
+合并原则：
+1. 以 09-decision.md 指定的 base candidate 为主卡。
+2. 只能吸收 09-decision.md 允许吸收的内容。
+3. 必须丢弃 09-decision.md 明确要求丢弃的内容。
+4. Unknowns 必须继续保留，不能在合并阶段消除。
+5. 不能把代码调查报告中的事实升级成实现指令。
+6. 不能把“可能相关文件”写成“必须修改文件”。
+7. DeepSeek 中的字段命名、SQL、性能设计、i18n key、实现策略不得进入合并卡。
+8. 合并后的卡必须仍然是需求视角，而不是工程实现视角。
 
-比较维度：
+输出标题必须是：
 
-1. 是否保留领导原话
-2. 是否准确识别主目标
-3. 是否区分 已确认 / 推测 / 未知
-4. 是否正确处理 表形式レポート / 集計レポート 的范围差异
-5. 是否正确保留“最新”口径风险
-6. 是否没有进入实现方案
-7. Acceptance Criteria 是否可手动验证
-8. Unknowns 是否完整
-9. 风险与歧义是否充分
-10. 是否适合作为后续 frozen requirement card 的基础
+# Selected Requirement Card
 
-特别注意：
-- 如果某张 Candidate 把 Unknown 写成了已确认事实，必须指出。
-- 如果某张 Candidate 把“最新 = Cdr.start_date 最大值”直接当成确定事实，必须指出。
-- 如果某张 Candidate 忽略了集計レポート范围风险，必须指出。
-- 如果某张 Candidate 忽略了 CSV / API / 表形式 CSV / 集計 CSV 范围未知，必须指出。
-- 如果某张 Candidate 混入实现方案，必须指出。
+必须包含以下章节：
 
-输出格式：
+1. 原始需求保真
+2. 一句话需求摘要
+3. 用户真实目标
+4. 业务对象与操作路径
+5. 当前现状
+6. 期望结果
+7. 明确范围 In Scope
+8. 明确不做 Out of Scope
+9. 需要确认 Unknowns
+10. 验收标准 Acceptance Criteria
+11. 风险与歧义
+12. 给后续 Engineering Requirement Card 的输入提醒
 
-# Round 1 Candidate Comparison
+特别要求：
+- 在 Unknowns 中必须保留：
+  - 表形式レポート是否为唯一范围
+  - 集計レポート是否也必须支持
+  - “最新”口径：Cdr.start_date 最大值 vs customer_notes.max(id) 链路
+  - 无発着信履歴数据时显示规则
+  - 順番最后一位的边界
+  - CSV 是否属于本次范围
+  - api_find_report 是否需要同步影响
+  - 表形式 CSV / 集計 CSV 是否属于本次范围
+  - 多语言文案 / 翻译范围
+  - 列宽 / 排序 / 筛选默认行为
+  - 权限可见性
+- 在风险中必须保留：
+  - “最新”业务口径风险
+  - 表形式 / 集計范围风险
+  - CSV / API 派生影响风险
+  - 発信 vs 発着信、日付 vs 日時 表述歧义
+  - /admin/cdr/index 排序不一定等于 start_date 最新的隐性偏差
+- Acceptance Criteria 必须可手动验证。
+- 对尚未确认的范围，不要写成必验收项，只能写成“确认后补充 AC”。
+
+只输出 Selected Requirement Card 正文。
+
+---
+
+## 09-decision.md
+
+# Round 2 Decision
+
+## 1. Decision Summary
+
+本轮 Requirement Card 抽卡决策结论：以 **Codex (Candidate A)** 作为 frozen 主卡基础，吸收 Claude (Candidate B) 的歧义双维度拆解、自我边界声明、参考页面排序警示与下一阶段拆分思路；吸收 DeepSeek (Candidate C) 中关于「集計レポート目前未包含 cdr 相关数据」这一业务层差异（必须先用业务语言改写）；丢弃 DeepSeek 全部代码层标识符与代码调查结论升级表述、以及 Claude 中泄漏的代码标识符。所有 Unknowns 必须原样保留至下一卡阶段，不得在本决策阶段消除。
+
+本决策仅做抽卡与合并规则定义，不生成新的 Requirement Card 正文，不进入 Engineering Requirement Card，不写 SQL / patch / diff / 实现方案。
+
+---
+
+## 2. Selected Base Candidate
+
+**Candidate A: Codex**
+
+- 评分总分：77（三张候选最高）
+- `no_implementation_leakage`：10（满分，三张候选唯一）
+- `unknowns_quality`：10（满分，颗粒度最细 13 条）
+- `scope_control`：10（满分）
+- `acceptance_criteria_quality`：10（AC 全部业务化可手动验证）
+- `usefulness_for_next_stage`：10（满分）
+
+---
+
+## 3. Selection Reason
+
+1. **评分 winner**：依据 08-score.json，Codex 总分 77 > Claude 72 > DeepSeek 52，无强理由反转，按评分基准定为主卡。
+2. **需求语言纯净度最高**：几乎不使用 `target=1/2`、`type=1/2`、`cdr.start_date`、`customer_notes.max(id)`、`privilege.conf` 等代码层标识符，最符合 Requirement Card 阶段「业务语言、不替实现拍板」的定位。
+3. **已确认 / 推测 / 未知 三态分层最干净**：主卡冻结后被错误升级为实现指令的风险最低，与本卡「不能把代码事实升级为业务事实」的红线一致。
+4. **"最新"口径完全置于 Unknown 3**：两个候选均用业务语言描述（"按 `発着信時間` 本身取最新" vs "沿用现有既存链路中的最新定义"），不需要做业务化回退处理。
+5. **Out of Scope 与「给后续 Engineering 的输入提醒」自我边界声明最严格**：显式禁止把代码调查升级为实现指令、禁止把候选文件升级为必须修改文件。
+6. **Unknowns 颗粒度最细**：13 条，并把"用户补充原话中的 `* 集計レポート` 究竟是要求还是线索"作为独立 Unknown 13，符合本阶段「不消除 Unknown」原则。
+7. **AC 完全业务化**：未出现任何代码字段名作为 AC 表达（与 DeepSeek AC-Regression-003 使用 `Cdr.start_date` 形成对比），可手动验收。
+
+---
+
+## 4. Content to Absorb
+
+### 4.1 From Codex
+
+作为主卡基础，**全文保留**为合并基线。本节不列额外吸收项（08-score.json 的 `absorb_from_codex` 同为空）。
+
+### 4.2 From Claude
+
+吸收以下**需求层面**内容（不吸收任何代码标识符或实现细节）：
+
+1. **歧义 1 双维度并列拆解**：将 Codex 的「歧义 1」表述替换/合并为 Claude 的双维度并列结构——「発信」/「発着信」与「日付」/「日時」拆成两个独立维度，分别说明各自对数据筛选条件的影响，并指出二者共同决定了对数据筛选条件的不同理解。
+2. **一句话需求摘要末尾的自我边界声明**：吸收 Claude 摘要末尾"该项目所对应「最新」的判定口径见 Unknowns，本卡阶段不替业务侧拍板"的措辞，加在 Codex 第 2 节末尾。
+3. **风险 6 的详细警示措辞**：吸收 Claude「`/admin/cdr/index` 默认排序更接近 `id DESC`，不能直接等同 `start_date DESC` 口径」这一对参考页面排序与「最新」口径不严格对齐的详细描述，扩写主卡风险 6（`id DESC` / `start_date DESC` 作为口径概念可保留，因其用于警示口径偏差，不构成实现方案）。
+4. **下一阶段拆分思路**：吸收 Claude「给后续阶段的提醒」中「"展示一个名为発着信日時（最新）的项目"与"该项目背后的最新判定口径"是两件事，下一卡阶段必须分别处理」的明确拆分要求，加入 Codex 第 12 节。
+
+### 4.3 From DeepSeek
+
+仅吸收**需求层面 Unknown / 风险提示**，不吸收实现内容：
+
+1. **集計链路差异的业务化描述**：吸收 DeepSeek 关于"集計レポート目前未包含 cdr 相关数据，一旦纳入会触及取数链路调整"这一业务层差异说明，加入主卡风险 2 作为补充。**必须先用业务语言改写**：去掉 `target=`、`type=`、`cdr` 等代码标识符，改写为"集計レポート现有数据范围与表形式不同，若集計也被纳入本次范围，会触及现有数据范围之外的内容，影响面会明显扩大"之类业务表达。
+
+除上述一条业务化改写后的差异说明外，**DeepSeek 不再吸收任何其他内容**。
+
+---
+
+## 5. Content to Discard
+
+明确丢弃以下内容，**不进入合并主卡**：
+
+1. **DeepSeek 全部代码层标识符**：`target=1`、`target=2`、`target=1（顧客対応履歴）`、`target=2（顧客最新情報）`、`type=1`、`type=2`、`X/Y/V`、`cdr.start_date`、`customer_notes.max(id)`、`privilege.conf` 等。
+2. **DeepSeek 将代码调查结论标记为「已确认」的表述**：包括但不限于「`target=2（顧客最新情報）` 的数据取数逻辑是通过"最新 customer_note"关联，其"最新"判定链路与 `cdr.start_date` 无直接关系」「`項目（*必須）` 区块仅在表形式（type=1）显示；集計（type=2）使用不同的字段选择方式（X/Y/V 下拉）」「`/admin/cdr/index` 中「発着信時間」对应 `cdr.start_date`」等——这些是代码调查结论，不能在主卡阶段升级为业务事实。
+3. **DeepSeek AC-Regression-003 的字段名表达**：`target=1（顧客対応履歴）` 侧的既存 `Cdr.start_date` 项目行为不受影响——一律用业务名「顧客対応履歴侧既存発着信時間相关项目」替代。
+4. **DeepSeek 风险 7**：关于 `privilege.conf` 未实现 action 的描述——DeepSeek 自己也写了"与本次需求无直接业务关系"，属于代码调查附产物，不进入主卡。
+5. **Claude Unknown 3 候选 B 的代码层链路描述**：「沿用既存「顧客最新情報」链路的最新语义，即 `customer_notes.max(id)` 链路所关联到的 cdr」——保留 Codex 现有的纯业务语言表述「沿用现有「顧客最新情報」既存链路中的"最新"定义」。
+6. **Claude 第 5 条「当前现状」中的代码标识符**：「`項目（*必須）` 区块仅在表形式（type=1）配置中存在；集計（type=2）使用 X/Y/V 下拉」——保留 Codex 业务化表述「`項目（*必須）` 这一块对应的是表形式レポート的项目选择；集計レポート的选择形式不同」。
+7. **DeepSeek 风险 1 中的代码字段表达**：「现有「顧客最新情報」链路用 `customer_notes.max(id)`，业务表达可能期望 `cdr.start_date` 最新」——保留 Codex / Claude 中的业务语言表述。
+8. **任何形式的 SQL、字段命名、性能设计、i18n key、patch、diff、实现方案**：本决策阶段与下一阶段（10-selected-requirement-card.md 合并阶段）一律不引入。
+
+---
+
+## 6. Unknowns That Must Remain
+
+以下 Unknowns 必须在合并后主卡中**原样保留**，本决策阶段**不得消除、不得收敛、不得在本卡阶段拍板**：
+
+| # | Unknown | 来源 | 保留理由 |
+|---|---|---|---|
+| 1 | 本次是否只要求「表形式レポート」支持 `発着信日時（最新）` | Codex U1 / Claude U1 / DeepSeek U1 | 范围未拍板，必须业务侧确认 |
+| 2 | 「集計レポート」是否也必须支持 `発着信日時（最新）` | Codex U2 / Claude U2 / DeepSeek U2 | 集計链路与表形式不同，影响面差异极大 |
+| 3 | `発着信日時（最新）` 中"最新"的判定口径（候选 A vs 候选 B） | Codex U3 / Claude U3 / DeepSeek U3 | 本卡最关键 Unknown，必须由业务侧拍板，不得由实现侧自行决定 |
+| 4 | 客户无発着信履歴数据时的显示规则（空 / `-` / `N/A` / `(空白)` 等） | Codex U4 / Claude U4 / DeepSeek U4 | 业务侧显示规范未指定 |
+| 5 | `順番` "最后一位" 的精确语义（系统项目最后 vs 全列表最后） | Codex U5 / Claude U5 / DeepSeek U5 | 视觉结果可能不同 |
+| 6 | CSV 是否属于本次范围 / 表形式 CSV / 集計 CSV 是否都属于本次范围 | Codex U6 + U8 / Claude U6 / DeepSeek U6 | 派生输出范围未确认 |
+| 7 | `api_find_report` 是否需要同步影响 | Codex U7 / Claude U7 / DeepSeek U7 | 对外接口范围未确认 |
+| 8 | 完整菜单进入路径 | Codex U12 / Claude U8 / DeepSeek U8 | 不影响需求本身，影响 AC 手动操作描述 |
+| 9 | 多语言文案 / 翻译范围（仅日文 vs 覆盖其他语言） | Codex U9 / Claude U9 / DeepSeek U9 | 多语言范围未确认 |
+| 10 | 列宽 / 排序 / 筛选的默认行为 | Codex U10 / Claude U10 / DeepSeek U10 | 报表查看页面新列默认行为未确认 |
+| 11 | 权限可见性（特定角色下是否不可见 / 不可选） | Codex U11 / Claude U11 / DeepSeek U11 | 业务可见性规则未确认 |
+| 12 | 用户补充原话中的 `* 集計レポート` 究竟是要求还是线索 | Codex U13 | 颗粒度最细的独立 Unknown，影响 Unknown 1、2 的最终拍板 |
+
+**强制约束**：以上 12 条 Unknowns 在合并后的 10-selected-requirement-card.md 中必须全部保留。不得因为某条 Unknown 在 Comparison 或 Score 中讨论过就视作已收敛；本决策阶段不消除任何 Unknown。
+
+---
+
+## 7. Merge Rules for 10-selected-requirement-card.md
+
+合并到 10-selected-requirement-card.md 时，必须遵循以下规则：
+
+### 7.1 基线规则
+1. **以 Codex 全文为合并基线**：除明确指定的吸收点外，其余结构与内容沿用 Codex。
+2. **不新建章节、不改章节编号**：第 1–12 节结构与 Codex 一致。
+
+### 7.2 章节级合并规则
+
+| 章节 | 合并规则 |
+|---|---|
+| 第 1 节「原始需求保真」 | Codex 原文保留，三张候选完全一致，无需变动 |
+| 第 2 节「一句话需求摘要」 | Codex 原文 + 吸收 Claude 末尾自我边界声明（"该项目所对应「最新」的判定口径见 Unknowns，本卡阶段不替业务侧拍板"） |
+| 第 3 节「用户真实目标」 | Codex 原文保留 |
+| 第 4 节「业务对象与操作路径」 | Codex 原文保留 |
+| 第 5 节「当前现状」 | Codex 原文，但**将第 5 条「当前代码调查显示，「顧客最新情報」既存数据链路中的"最新"口径，与"按発着信日時本身取最新"并不一定相同」从 已确认 改为 推测**，与 Claude 处理对齐 |
+| 第 6 节「期望结果」 | Codex 原文保留 |
+| 第 7 节「明确范围 In Scope」 | Codex 原文保留 |
+| 第 8 节「明确不做 Out of Scope」 | Codex 原文保留 |
+| 第 9 节「需要确认 Unknowns」 | Codex 原文 13 条 Unknowns **全部保留**，不合并、不删减、不消除 |
+| 第 10 节「验收标准 Acceptance Criteria」 | Codex 原文保留（已全部业务化，无需修改） |
+| 第 11 节「风险与歧义」 | Codex 原文，但做三处扩写：① 风险 2 末尾追加业务化补充（吸收 DeepSeek 后去代码标识符）；② 风险 6 用 Claude 的详细措辞扩写参考页面排序与"最新"口径偏差；③ 歧义 1 改为 Claude 双维度并列拆解 |
+| 第 12 节「给后续 Engineering 的输入提醒」 | Codex 原文 + 吸收 Claude「"展示一个名为発着信日時（最新）的项目"与"该项目背后的最新判定口径"是两件事，下一卡阶段必须分别处理」一条 |
+
+### 7.3 严格禁止项
+
+合并时**严格禁止**以下行为：
+
+1. 引入任何代码层标识符：`target=1/2`、`type=1/2`、`X/Y/V`、`cdr.start_date`、`customer_notes`、`customer_notes.max(id)`、`privilege.conf`、`Cdr.start_date` 等。
+2. 把任何 Unknown 在本阶段拍板、收敛或消除。
+3. 把代码调查结论作为「已确认」事实写入主卡。
+4. 引入任何 SQL、字段命名、性能设计、i18n key、patch、diff、实现方案。
+5. 把"可能相关文件"升级为"必须修改文件"。
+6. 在 AC 中使用代码字段名（如 DeepSeek 的 `Cdr.start_date`）。
+7. 添加未在三张候选中出现过的、由合并阶段新创造的需求要素。
+8. 改写或省略领导原话与用户补充原话（必须 1:1 保留）。
+
+### 7.4 业务化改写规则
+
+当吸收 DeepSeek 内容时（仅集計链路差异一条），必须：
+
+- 去掉 `cdr`、`target=`、`type=` 等代码标识符；
+- 用业务名词（「集計レポート」「表形式レポート」「現有数据范围」「取数范围」等）替代；
+- 改写后语句必须读起来像业务描述，而非代码调查摘录。
+
+参考改写示例（仅示例，最终以合并执行时为准）：
+- DeepSeek 原文："集計レポート（type=2）一旦也要支持，会触及当前集計数据链路未包含 cdr 的事实"
+- 业务化改写后："若集計レポート也被纳入本次范围，集計现有的数据范围与表形式不同，会触及现有数据范围之外的内容，影响面将明显扩大于仅在表形式追加一项"
+
+### 7.5 校验清单
+
+合并完成后，10-selected-requirement-card.md 必须满足：
+
+- 全文无 `target=`、`type=`、`cdr.start_date`、`customer_notes.max(id)`、`privilege.conf` 等代码标识符。
+- 12 条 Unknowns 全部保留。
+- 领导原话与用户补充原话 1:1 保留。
+- 无任何 SQL / patch / diff / 字段命名 / 性能设计 / i18n 实现细节。
+- AC 全部业务化可手动验收。
+- 第 5 节中代码调查结论一律标记为 推测 或剥离至风险条目。
+- 第 11 节歧义 1 为双维度并列拆解。
+- 第 12 节包含「项目展示」与「最新判定口径」必须分别处理的拆分提醒。
+
+---
+
+注：09-decision.md 的文件写入未获权限，已按 instruction「只输出决策报告正文」直接输出。如需写入文件，请允许写入 `…/m1-requirement-card/round-2/09-decision.md`。
+
+---
+
+## 07-comparison.md
+
+# Round 2 Candidate Comparison
 
 ## 1. 总体结论
+
+三张 Candidate 整体质量都达到了 Requirement Card 阶段的基本要求：领导原话保真、主目标识别、已确认/推测/未知分层、"最新"口径风险保留、集計范围风险保留、CSV/API/多语言/权限等 Unknowns 均覆盖，AC 可手动验证，都没有进入 SQL/patch/diff。
+
+差异点主要集中在「需求语言 vs 代码语言」的纯净度：
+- **Codex（A）**：最克制，几乎不使用代码层标识符（如 `target=1/2`、`type=1/2`、`cdr.start_date`、`customer_notes.max(id)`），需求语言纯净度最高，最适合作为 frozen 主卡基础。
+- **Claude（B）**：语言层歧义分析（「発信/発着信」「日付/日時」两层维度同时展开）最详尽，但在 Unknown 3 候选 B 中引入了 `customer_notes.max(id)` 这一代码层链路描述，纯净度略有损失。
+- **DeepSeek（C）**：代码调查含量最高，多处使用 `target=1/2`、`type=1/2`、`cdr.start_date`、`customer_notes.max(id)`，部分内容更接近"代码调查报告"而非"需求卡"，且将代码调查结论标记为 已确认 的密度最高，存在隐性把代码事实升级为业务事实的风险。
+
+均未触发本轮特别注意的红线（把 "最新 = `cdr.start_date` 最大值" 直接当成已确认事实、忽略集計范围、忽略 CSV/API 范围、混入实现方案）。
+
+---
 
 ## 2. Candidate A: Codex 评价
 
 ### 优点
+- 领导原话与用户补充原话完整逐字保留，无改写。
+- 已确认/推测/未知 三态分层最干净，每个条目均明确打标签。
+- 主目标识别准确，覆盖「不必回到顧客対応履歴逐条翻看」核心动机。
+- "最新"口径完全置于 Unknown 3，未越权拍板，候选 A/B 表述使用业务语言（"按 `発着信時間` 本身取最新" vs "沿用现有「顧客最新情報」既存链路中的最新定义"），不依赖代码层概念。
+- 表形式 / 集計范围差异在「当前现状」「Out of Scope 注意条」「Unknowns」「风险与歧义」中均有保留，未漏。
+- CSV、`api_find_report`、表形式 CSV / 集計 CSV、多语言、列宽/排序/筛选、权限可见性 全部正确置于 Unknowns。
+- Unknowns 数量最多（13 条），并把"用户补充原话中的 `* 集計レポート` 是要求还是线索"作为独立 Unknown，颗粒度最细。
+- 给后续 Engineering 阶段的输入提醒条目最详细，明确禁止将代码调查升级为实现指令。
+- 完全未出现 SQL/字段名/diff/patch/i18n 实现细节。
+
 ### 问题
+- 第 5 条「当前现状」中"既存数据链路中的'最新'口径，与按発着信日時本身取最新并不一定相同"被标记为 已确认；该结论来自代码调查而非业务确认，更适合标记为 推测，但 Codex 通过避免点名 `customer_notes` 等代码标识符，影响有限。
+- 用户补充原话中的「発着信日時（最新）→ 発着信履歴に一番最新」语义偏向已经隐含「最新発着信」口径，本卡未把这层"用户已经倾向于哪个候选"的解读单列。
+- 歧义 1 与 Claude/DeepSeek 相比稍精炼，但未把「発信/発着信」「日付/日時」两个维度像 Claude/DeepSeek 那样并列展开。
+
 ### 可吸收内容
+- Out of Scope 中"本卡仅定义需求与验收边界，不定义最新口径、不定义实现方式"的自我边界声明可作为主卡的明示约束。
+- Unknown 13（"用户补充原话中的 `* 集計レポート`，究竟是明确业务要求还是仅为调查线索"）作为独立 Unknown，可吸收。
+- 「给后续 Engineering Requirement Card 的输入提醒」中"不得把代码调查报告中的可能相关文件升级为必须修改文件"这一明示边界。
+
+---
 
 ## 3. Candidate B: Claude 评价
 
 ### 优点
+- 领导原话与用户补充原话完整保留。
+- 主目标识别准确，且把"切换 → 翻全履歴 → 人工提取"操作链描写得很具体。
+- 一句话需求摘要明确写出「該項目所對應「最新」的判定口径见 Unknowns，本卡阶段不替业务侧拍板」，自我边界最显式。
+- 歧义 1 拆得最细：把「発信」/「発着信」与「日付」/「日時」拆成两个维度并列展开，并指出"这两层表述差异共同决定了对数据筛选条件的不同理解"，这是 Codex 没有充分展开的角度。
+- 风险条目数量与覆盖度均充分（7 条风险 + 1 条多维度歧义）。
+- 表形式 / 集計范围差异、CSV、`api_find_report`、多语言、列宽/排序/筛选、权限可见性 全部置于 Unknowns。
+- 风险 6 明确"`/admin/cdr/index` 默认排序更接近 `id DESC`，不能直接等同 `start_date DESC` 口径"，避免参考页面被误用为业务口径依据。
+
 ### 问题
+- Unknown 3 候选 B 写为"沿用既存「顧客最新情報」链路的最新语义，即 `customer_notes.max(id)` 链路所关联到的 cdr"——`customer_notes.max(id)` 是代码层链路而非业务语言，本来不应在需求卡 Unknown 中使用代码标识符。Codex 在同一位置使用了纯业务语言。
+- 第 5 条「当前现状」「`項目（*必須）` 区块仅在表形式（type=1）配置中存在；集計（type=2）使用 X/Y/V 下拉」中出现了 `type=1`、`type=2`、`X/Y/V` 等代码层概念，这是从代码调查带入需求卡的语言。
+- 推测条「当前「顧客最新情報」的「最新」判定与「最新一条発着信履歴」的「最新」可能不是同一口径」标记为 推测，标记合适；但与 Codex 把同一事实标记为 已确认 相比，两边方向不一致，可在合并时统一为 推测 更稳妥。
+
 ### 可吸收内容
+- 一句话需求摘要中的自我边界声明（"本卡阶段不替业务侧拍板"）。
+- 歧义 1 的「両维度并列」拆解方式（「発信/発着信」与「日付/日時」分别说明各自影响）。
+- 风险 6 中对 `/admin/cdr/index` 默认排序与「最新」口径不严格对齐的描述。
+- 给后续阶段提醒中「"展示一个名为発着信日時（最新）的项目"与"该项目背后的最新判定口径"是两件事，下一卡阶段必须分别处理」这一拆分思路。
+
+---
 
 ## 4. Candidate C: DeepSeek 评价
 
+### 问题（先列问题，因为问题较为集中）
+- **代码语言密集泄露**：在「当前现状」「Out of Scope」「Unknowns」「AC-Regression-003」中大量使用 `target=1`、`target=2`、`type=1`、`type=2`、`cdr.start_date`、`customer_notes.max(id)`、`privilege.conf` 等代码层标识符，部分内容已经更接近"代码调查报告摘录"而非"业务需求卡"。
+- 「当前现状」中"`target=2（顧客最新情報）` 的数据取数逻辑是通过'最新 customer_note'关联，其'最新'判定链路与 `cdr.start_date` 无直接关系"标记为 已确认。该结论来自代码调查，从需求卡视角应标记为 推测 或写在「背景调查附录」而非「当前现状·已确认」。Claude 在等价位置标记为 推测，相对更稳。
+- AC-Regression-003 写为"`target=1（顧客対応履歴）` 侧的既存 `Cdr.start_date` 项目行为不受影响"——这是直接用代码字段名作为 AC 表达，手动验收时不便对应到画面。Codex/Claude 在同一处使用业务名「顧客対応履歴侧既存発着信時間相关项目」，更适合手动验收。
+- Unknown 3 候选 B 与 Claude 一样使用了 `customer_notes.max(id)`，且 Unknown 2 中"涉及集計的数据取数链路是否需要调整"也偏实现侧描述。
+- 风险 7 提到"`privilege.conf` 中存在未实现 action 的权限项"——这是代码调查的副产物，与需求卡当前阶段关联弱，本卡放入风险表稍显越位。
+
 ### 优点
-### 问题
+- 领导原话与用户补充原话完整保留。
+- 主目标识别准确。
+- 表形式 / 集計范围差异保留充分，集計链路风险写得最具体（指出集計目前未包含 cdr 数据）。
+- "最新"口径完全置于 Unknown 3，未把任一候选当成已确认事实。
+- CSV、`api_find_report`、多语言、列宽/排序/筛选、权限可见性 全部置于 Unknowns。
+- 歧义 1（「発信/発着信」「日付/日時」双维度）与 Claude 同步展开。
+- 风险 6（`/admin/cdr/index` 排序更接近 `id DESC`）保留了对参考页面口径的警示。
+
 ### 可吸收内容
+- 集計链路差异的具体表述方式（"集計目前未包含 cdr 相关数据"是更具操作意义的差异说明，可在主卡风险条目中以业务化表达吸收）。
+- 风险 5 对"CSV / API 派生输出做一半"的措辞较精炼。
+
+---
 
 ## 5. 横向对比表
 
-| 维度 | Codex | Claude | DeepSeek |
+| 维度 | Codex (A) | Claude (B) | DeepSeek (C) |
 |---|---|---|---|
+| 1. 保留领导原话 | ✅ 完整 | ✅ 完整 | ✅ 完整 |
+| 2. 准确识别主目标 | ✅ 准确 | ✅ 准确，操作链最具体 | ✅ 准确 |
+| 3. 已确认/推测/未知分层 | ✅ 最干净 | ✅ 基本干净 | ⚠️ 多处将代码调查结论标为已确认 |
+| 4. 表形式/集計范围差异 | ✅ 充分 | ✅ 充分 | ✅ 最具体（指明集計目前未含 cdr） |
+| 5. "最新"口径风险保留 | ✅ Unknown 候选用业务语言 | ⚠️ Unknown 候选 B 出现 `customer_notes.max(id)` | ⚠️ Unknown 候选 B 出现 `customer_notes.max(id)` |
+| 6. 未进入实现方案 | ✅ 最纯净 | ⚠️ 偶有代码标识符（`type=1`/`type=2`） | ❌ 大量 `target=1/2`、`type=1/2`、`cdr.start_date`、`customer_notes.max(id)`、`privilege.conf` |
+| 7. AC 可手动验证 | ✅ 全部业务化 | ✅ 全部业务化 | ⚠️ AC-Regression-003 用代码字段名 `Cdr.start_date` |
+| 8. Unknowns 完整 | ✅ 13 条，颗粒最细 | ✅ 11 条 | ✅ 11 条 |
+| 9. 风险与歧义充分 | ✅ 7 风险 + 2 歧义 | ✅ 7 风险 + 多维歧义 | ✅ 7 风险 + 多维歧义 |
+| 10. 适合作为 frozen 主卡基础 | ✅ 最适合 | ✅ 适合，需替换代码标识符 | ⚠️ 需较多业务化改写 |
+
+---
 
 ## 6. 关键风险保留情况
 
+| 关键风险 | Codex (A) | Claude (B) | DeepSeek (C) |
+|---|---|---|---|
+| 是否把 Unknown 写成已确认事实 | ⚠️ 1 处轻度（既存口径差异以已确认表述，但未点代码名）| ⚠️ 推测处理较稳 | ⚠️ 多处把代码调查结论标记为已确认（集計链路、target=2 取数逻辑） |
+| 是否把 "最新 = `cdr.start_date` 最大值" 当成确定事实 | ✅ 未发生，候选 A 用 "按 `発着信時間` 本身取最新" 业务语言 | ✅ 未发生 | ✅ 未发生 |
+| 是否忽略集計レポート范围风险 | ✅ 未忽略 | ✅ 未忽略 | ✅ 未忽略，最具体 |
+| 是否忽略 CSV / API / 表形式 CSV / 集計 CSV 范围未知 | ✅ 显式列出表形式 CSV / 集計 CSV 两条 | ✅ 显式列出 | ✅ 显式列出 |
+| 是否混入实现方案 | ✅ 无 | ⚠️ 个别代码标识符 | ⚠️ 较多代码标识符与代码调查结论 |
+| 参考页面（cdr/index）排序与"最新"口径偏差是否警示 | ✅ 风险 6 | ✅ 风险 6 | ✅ 风险 6 |
+| 「発信/発着信」「日付/日時」歧义是否拆解 | ⚠️ 两维度并存但未并列展开 | ✅ 双维度并列 | ✅ 双维度并列 |
+
+---
+
 ## 7. 推荐主卡
+
+**推荐 Candidate A: Codex 作为 frozen requirement card 主卡基础。**
+
+理由：
+1. 需求语言纯净度最高，几乎不依赖代码层标识符，最符合 Requirement Card 阶段「业务语言、不替实现拍板」的定位。
+2. 已确认/推测/未知 三态分层最干净，主卡冻结后被错误升级为实现指令的风险最低。
+3. "最新"口径 Unknown 的两个候选均用业务语言描述（"按 `発着信時間` 本身取最新" vs "沿用现有既存链路中的最新定义"），不需要回退处理。
+4. Unknowns 颗粒度最细（13 条），AC 全部业务化可手动验证。
+5. Out of Scope 与「给后续 Engineering 的输入提醒」自我边界声明最严格。
+
+---
 
 ## 8. 合并建议
 
-只输出比较报告正文。
+以 Codex（A）为主干，按以下方式吸收 Claude（B）和 DeepSeek（C）：
+
+1. **歧义 1 扩写**：将 Codex 歧义 1 替换/合并为 Claude 与 DeepSeek 的「両维度并列」表达——「発信」/「発着信」与「日付」/「日時」拆成两个独立维度，并指出二者共同决定了数据筛选条件的不同理解。
+
+2. **一句话需求摘要补一句自我边界**：吸收 Claude 摘要末尾"该项目所对应「最新」的判定口径见 Unknowns，本卡阶段不替业务侧拍板"的措辞。
+
+3. **「当前现状」第 5 条降级为推测或剥离**：把 Codex 现有「当前代码调查显示，「顧客最新情報」既存数据链路中的"最新"口径，与"按発着信日時本身取最新"并不一定相同」从 已确认 改为 推测，与 Claude 处理一致；或移到风险条目中。
+
+4. **集計链路差异具体化**：吸收 DeepSeek 关于"集計レポート目前未包含 cdr 相关数据，一旦纳入会触及取数链路调整"的业务化描述，加入风险 2 作为补充说明（**但必须先用业务语言改写，去掉 `target=` / `type=` 等代码标识符**）。
+
+5. **不吸收 DeepSeek 的代码层标识符**：`target=1/2`、`type=1/2`、`cdr.start_date`、`customer_notes.max(id)`、`privilege.conf` 等一律不进入主卡。Unknown 3 候选 B 保留 Codex 现有的业务语言表述，不接受 Claude/DeepSeek 中"即 `customer_notes.max(id)` 链路所关联到的 cdr"这种代码层描述。
+
+6. **保留下一阶段拆分思路**：吸收 Claude「给后续阶段的提醒」中「"展示一个名为発着信日時（最新）的项目"与"该项目背后的最新判定口径"是两件事，下一卡阶段必须分别处理」的明确拆分要求，加入 Codex 第 12 节。
+
+7. **不吸收 DeepSeek 风险 7**（关于 `privilege.conf` 未实现 action 的描述）：与本卡需求关联弱，且 DeepSeek 自己也写了"与本次需求无直接业务关系"，属于代码调查附产物，不进入主卡。
+
+合并后主卡应当：在保持 Codex 的纯净需求语言的前提下，吸收 Claude 的歧义双维度拆解与自我边界声明，以及 DeepSeek 的集計差异具体化（去代码语言后），并把所有从代码调查得出的事实统一降级为 推测 或单独标注「来自代码调查，未经业务确认」。
+
+---
+
+## 08-score.json
+
+{
+  "round": "round-2",
+  "scores": {
+    "codex": {
+      "fidelity_to_original_request": 10,
+      "requirement_clarity": 9,
+      "scope_control": 10,
+      "unknowns_quality": 10,
+      "risk_detection": 8,
+      "acceptance_criteria_quality": 10,
+      "no_implementation_leakage": 10,
+      "usefulness_for_next_stage": 10,
+      "total": 77,
+      "summary": "需求语言最纯净，Unknowns颗粒度最细且全用业务语言，AC完全可手动验证，无任何实现泄漏，最适合作为frozen主卡基础。仅一处现状描述标记为已确认来自代码调查，但未引入代码标识符，影响轻微。"
+    },
+    "claude": {
+      "fidelity_to_original_request": 10,
+      "requirement_clarity": 10,
+      "scope_control": 10,
+      "unknowns_quality": 8,
+      "risk_detection": 10,
+      "acceptance_criteria_quality": 10,
+      "no_implementation_leakage": 6,
+      "usefulness_for_next_stage": 8,
+      "total": 72,
+      "summary": "自我边界声明最明确，歧义双维度拆解最优，风险检测全面。但Unknown 3候选B和现状中出现customer_notes.max(id)、type=1/2等代码标识符，降低了需求语言纯净度。"
+    },
+    "deepseek": {
+      "fidelity_to_original_request": 10,
+      "requirement_clarity": 7,
+      "scope_control": 6,
+      "unknowns_quality": 6,
+      "risk_detection": 8,
+      "acceptance_criteria_quality": 7,
+      "no_implementation_leakage": 3,
+      "usefulness_for_next_stage": 5,
+      "total": 52,
+      "summary": "多处理论覆盖，但大量使用target=1/2、type=1/2、cdr.start_date、customer_notes.max(id)等代码标识符，多处将代码调查结论标记为已确认，AC-Regression-003以字段名表达，最接近代码调查报告而非纯需求卡。"
+    }
+  },
+  "winner": "codex",
+  "merge_policy": {
+    "base_candidate": "codex",
+    "absorb_from_codex": [],
+    "absorb_from_claude": [
+      "歧义1双维度并列：将「発信/発着信」与「日付/日時」拆成两个独立维度说明各自影响",
+      "一句话需求摘要末尾的自我边界声明：该项目所对应「最新」的判定口径见Unknowns，本卡阶段不替业务侧拍板",
+      "风险6中对/admin/cdr/index默认排序更接近id DESC而非start_date DESC的详细警示",
+      "给后续阶段的提醒中「展示一个名为発着信日時（最新）的项目」与「该项目背后的最新判定口径」是两件事，必须分别处理这一拆分思路"
+    ],
+    "absorb_from_deepseek": [
+      "集計链路差异具体化：集計目前未包含cdr相关数据，一旦纳入会触及取数链路调整（必须先业务化改写，去掉target=、type=等标识符）"
+    ],
+    "discard": [
+      "Claude中Unknown 3候选B的customer_notes.max(id)代码层描述",
+      "Claude现状中的type=1、type=2、X/Y/V等代码标识符",
+      "DeepSeek中所有target=1/2、type=1/2、cdr.start_date、customer_notes.max(id)、privilege.conf等代码标识符",
+      "DeepSeek将代码调查结论标记为已确认的表述（如集計链路、target=2取数逻辑）",
+      "DeepSeek AC-Regression-003中的Cdr.start_date字段名",
+      "DeepSeek风险7关于privilege.conf未实现action的描述"
+    ]
+  }
+}
 
 ---
 

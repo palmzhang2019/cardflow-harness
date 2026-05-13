@@ -1,8 +1,4 @@
-按指令「只输出决策报告正文」，以下是 Round 2 Decision 正文：
-
----
-
-# Round 1 Decision
+# Round 2 Decision
 
 ## 1. Decision Summary
 
