@@ -1,0 +1,33 @@
+{
+  "scores": {
+    "codex": {
+      "requirement_alignment": 5,
+      "code_fact_grounding": 4,
+      "engineering_scope_clarity": 4,
+      "boundary_control": 5,
+      "unknowns_quality": 4,
+      "m3_handoff_readiness": 4,
+      "total_weighted_score": 4.35
+    },
+    "claude": {
+      "requirement_alignment": 5,
+      "code_fact_grounding": 5,
+      "engineering_scope_clarity": 5,
+      "boundary_control": 5,
+      "unknowns_quality": 5,
+      "m3_handoff_readiness": 5,
+      "total_weighted_score": 5.00
+    },
+    "deepseek": {
+      "requirement_alignment": 4,
+      "code_fact_grounding": 3,
+      "engineering_scope_clarity": 4,
+      "boundary_control": 2,
+      "unknowns_quality": 3,
+      "m3_handoff_readiness": 3,
+      "total_weighted_score": 3.25
+    }
+  },
+  "recommended_winner": "claude",
+  "reasoning": "claude 在六个维度上全面领先：(1) requirement_alignment：完全保留 Frozen Requirement Card 的业务表述，通过 CBR-01~CBR-12 显式映射，未做任何改写；(2) code_fact_grounding：CIF-01~CIF-15 每条代码事实均带 `file:line` 行号锚点，事实与推测严格区分；(3) engineering_scope_clarity：表形式 / 集計 / CSV / api_find_report 四领域分节展开，且明确指出集計侧 X/Y/V 与表形式独立选择入口的工程差异；(4) boundary_control：未输出 SQL / patch / diff / 具体字段命名方案，EC 章节虽接近实现指引但严格保持在「约束」层面；(5) unknowns_quality：独创性地将 Unknowns 分为 U-B（业务侧继承自 M1）与 U-E（工程层衍生），主动识别出 U-E-01 集計 X/Y/V 归属、U-E-04 `-` 显示统一实现位置等只在代码事实层面才能发现的工程未知；(6) m3_handoff_readiness：完整 ID 体系（CBR/EC/AO/CIF/U-B/U-E/R/H）使 AC Mapping 表交叉引用最严密，§12 Handoff 10 条约束明确禁止 M3 把候选文件升格为必须修改文件、禁止输出 patch/SQL。codex 纪律性同样优秀且零越界，但缺少 ID 体系与文件行号引用，AC 与约束之间为叙述性映射，颗粒度不足；deepseek 存在多处明确边界违规（AC-007 把 `customer_notes.id 最大 → cdr.start_date` 这一推测升格为业务验收事实、§7 擅自承诺『至少日文』、§12 接近指定实现方向），并引用了 M1 不存在的 U-009/U-010/U-011/U-012 ID（脑补来源），boundary_control 与 code_fact_grounding 均明显扣分。综合加权后 claude(5.00) > codex(4.35) > deepseek(3.25)，推荐 claude 作为 M3 Code-grounded Plan 的主输入。"
+}
